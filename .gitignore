@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Conda / local env metadata
+.conda/
+.conda_env/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment/config files
+.env
+.env.*
+!.env.example
+
+# Data / uploads / generated artifacts
+/data/
+/data/**
+uploads/
+uploads/**
+data/uploads/
+data/jobs/
+data/models/
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.aac
+*.ogg
+*.opus
+*.aiff
+*.wav
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.zip
+*.tar
+*.gz
+*.bz2
+*.xz
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+
+# Python package caches
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test / coverage output
+.coverage
+.coverage.*
+htmlcov/
+
+# Project-local generated files
+*.sqlite3
+*.db
+*.bak
+*.orig
+
+# Local runtime artifacts
+run.log
+server.log
+
+# Optional: keep only project source files, ignore all generated media
+**/*.mp3
+**/*.wav
+**/*.m4a
+**/*.flac
+**/*.aac
+**/*.ogg
+**/*.opus
+**/*.zip

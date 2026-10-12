@@ -1,0 +1,5 @@
+# Install only if needed.
+# Speaker diarization:
+pyannote.audio>=4,<5
+# Alternative ASR / VAD / speaker components:
+#funasr>=1.4,<2
