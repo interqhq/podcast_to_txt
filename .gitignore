@@ -102,3 +102,7 @@ server.log
 **/*.ogg
 **/*.opus
 **/*.zip
+
+# Local working / temporary docs
+readme22.md
+requirements (copy).txt
