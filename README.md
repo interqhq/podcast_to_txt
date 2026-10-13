@@ -97,6 +97,12 @@ LLM_ENABLED=false
 
 上传一个 5~10 分钟样本。确认 ASR 正常后再开启 pyannote。
 
+如需在前端一键导出最终 JSON 到统一目录，可额外在 `.env` 设置：
+
+```env
+GLOBAL_JSON_EXPORT_DIR=/absolute/path/to/exports
+```
+
 ## NVIDIA
 
 当前 faster-whisper 新版 GPU 路径需要 CUDA 12 + cuDNN 9。若机器是较旧的 CUDA 11 / 旧 NVIDIA 卡，不要盲目升级系统；可以先用 CPU 跑通 V1，再根据 `nvidia-smi` 单独选择兼容的 CTranslate2 版本。
@@ -190,6 +196,7 @@ data/jobs/<job_id>/
 - `GET /api/jobs/{id}/timeline` 时间轴
 - `GET /api/jobs/{id}/audio` 音频播放
 - `GET /api/jobs/{id}/files/{name}` 下载结果
+- `POST /api/jobs/{id}/export-json-global` 复制最终 JSON 到全局目录
 - `GET /api/config` 当前运行配置（隐藏 API key）
 
 ## V1 后续建议

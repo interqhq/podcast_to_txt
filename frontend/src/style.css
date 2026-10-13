@@ -106,8 +106,22 @@ aside, main {
   color: #333;
   cursor: pointer;
 }
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .actions .danger { color: #a33; }
 .actions a { background: #222; color: #fff; }
+.export-hint {
+  margin: 0 20px 12px;
+  padding: 10px 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  background: #f9fbfd;
+  color: #516071;
+  font-size: 12px;
+  line-height: 1.6;
+}
 .layout audio {
   width: calc(100% - 40px);
   margin: 18px 20px;

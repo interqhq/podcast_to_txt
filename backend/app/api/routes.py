@@ -12,7 +12,16 @@ ALLOWED={'.mp3','.m4a','.wav','.flac','.aac','.ogg','.opus','.mp4','.webm'}
 
 @router.get('/config')
 def config():
-    return {'asr_provider':settings.asr_provider,'asr_model':settings.asr_model,'asr_device':settings.asr_device,'diarization_provider':settings.diarization_provider,'llm_enabled':settings.llm_enabled,'llm_provider':settings.llm_provider,'llm_model':settings.llm_model}
+    return {
+        'asr_provider':settings.asr_provider,
+        'asr_model':settings.asr_model,
+        'asr_device':settings.asr_device,
+        'diarization_provider':settings.diarization_provider,
+        'llm_enabled':settings.llm_enabled,
+        'llm_provider':settings.llm_provider,
+        'llm_model':settings.llm_model,
+        'global_json_export_dir':str(settings.global_json_export_path) if settings.global_json_export_path else '',
+    }
 
 @router.post('/jobs')
 async def upload_job(file:UploadFile=File(...)):
@@ -89,6 +98,29 @@ def output_file(job_id,name):
     p=settings.root/'jobs'/job_id/'output'/name
     if not p.exists() or p.is_dir() or p.name!=name: raise HTTPException(404)
     return FileResponse(p, filename=p.name)
+
+@router.post('/jobs/{job_id}/export-json-global')
+def export_json_global(job_id):
+    x=get_job(job_id)
+    if not x: raise HTTPException(404)
+    if x.get('status') != 'done':
+        raise HTTPException(409, 'Job is not finished yet')
+    export_dir = settings.global_json_export_path
+    if export_dir is None:
+        raise HTTPException(400, 'GLOBAL_JSON_EXPORT_DIR is not configured')
+    title = Path(x['filename']).stem.replace('/','_')
+    src = settings.root/'jobs'/job_id/'output'/f'{title}.json'
+    if not src.exists():
+        raise HTTPException(404, 'Output JSON not found')
+    dst = export_dir/f'{title}.json'
+    if dst.exists():
+        dst = export_dir/f'{title}_{job_id[:8]}.json'
+    try:
+        shutil.copy2(src, dst)
+    except OSError:
+        logging.exception('Failed to export json to global dir for job %s', job_id)
+        raise HTTPException(500, 'Failed to export json')
+    return {'ok': True, 'path': str(dst)}
 
 
 @router.delete('/jobs/{job_id}')

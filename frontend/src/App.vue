@@ -6,6 +6,10 @@ const cfg=ref({})
 const audioRef=ref(null)
 const transcriptRef=ref(null)
 const currentTime=ref(0)
+const refreshing=ref(false)
+const lastTimelineUpdatedAt=ref('')
+const exporting=ref(false)
+const exportMessage=ref('')
 
 function normalizeErrorText(raw){
   const text = String(raw || '').trim()
@@ -46,10 +50,45 @@ const currentSegment = computed(() => {
 })
 
 async function api(url,opt={}){const r=await fetch(url,opt); if(!r.ok) throw new Error(await r.text()); return r.json()}
-async function refresh(){jobs.value=await api('/api/jobs'); if(selected.value){const x=jobs.value.find(j=>j.id===selected.value.id); if(x) selected.value=x}}
+function formatErr(e){ return e instanceof Error ? e.message : String(e) }
+async function refresh(){
+  if(refreshing.value) return
+  refreshing.value=true
+  try{
+    jobs.value=await api('/api/jobs')
+    if(selected.value){
+      const prev = selected.value
+      const x=jobs.value.find(j=>j.id===selected.value.id)
+      if(!x){
+        selected.value=null
+        timeline.value=[]
+        lastTimelineUpdatedAt.value=''
+        return
+      }
+      selected.value=x
+      const shouldReloadTimeline =
+        !timeline.value.length ||
+        x.status==='running' ||
+        x.status==='queued' ||
+        x.updated_at!==lastTimelineUpdatedAt.value ||
+        x.updated_at!==prev.updated_at
+      if(shouldReloadTimeline){
+        timeline.value=await api(`/api/jobs/${x.id}/timeline`)
+        lastTimelineUpdatedAt.value=x.updated_at || ''
+        nextTick(ensureCurrentSegmentVisible)
+      }
+      if(x.status==='failed' && !jobError.value){
+        await fetchError(x)
+      }
+    }
+  } finally {
+    refreshing.value=false
+  }
+}
 async function select(j){
   selected.value=j
   timeline.value=await api(`/api/jobs/${j.id}/timeline`)
+  lastTimelineUpdatedAt.value=j.updated_at || ''
   currentTime.value = 0
   nextTick(ensureCurrentSegmentVisible)
   if(j.status==='failed') {
@@ -63,6 +102,18 @@ function choose(e){upload([...e.target.files])}
 function drop(e){upload([...e.dataTransfer.files].filter(f=>f.type.startsWith('audio/')||/\.(mp3|m4a|wav|flac|aac|ogg|opus|mp4|webm)$/i.test(f.name)))}
 async function retry(j){await api(`/api/jobs/${j.id}/retry`,{method:'POST'}); await refresh()}
 async function cancel(j){await api(`/api/jobs/${j.id}/cancel`,{method:'POST'}); await refresh()}
+async function exportJsonToGlobal(j){
+  exportMessage.value=''
+  exporting.value=true
+  try{
+    const r = await api(`/api/jobs/${j.id}/export-json-global`,{method:'POST'})
+    exportMessage.value = `已导出到：${r.path}`
+  }catch(e){
+    exportMessage.value = `导出失败：${normalizeErrorText(formatErr(e))}`
+  }finally{
+    exporting.value=false
+  }
+}
 async function remove(j){
 	if(!confirm('确定删除该任务及其文件吗？')) return
 	await api(`/api/jobs/${j.id}`,{method:'DELETE'})
@@ -112,7 +163,11 @@ function fmt(sec){if(sec==null)return '--:--';sec=Math.max(0,Math.floor(sec));re
 <div class="layout">
 <aside><div class="aside-title">任务 <small>{{jobs.length}}</small></div><div v-for="j in jobs" :key="j.id" class="job" :class="{sel:selected?.id===j.id}" @click="select(j)"><div class="job-name">{{j.filename}}</div><div class="meta"><span>{{j.step}}</span><span>{{pct(j)}}%</span></div><div class="bar"><i :style="{width:pct(j)+'%'}"></i></div><button class="delete" @click.stop="remove(j)">删除</button></div></aside>
 <main v-if="active">
-<div class="top"><div><h2>{{active.filename}}</h2><p>{{active.status}} · {{fmt(active.duration)}}</p></div><div class="actions"><button v-if="active.status==='failed'" @click="retry(active)">继续重试</button><button v-if="active.status==='failed'" @click="fetchError(active)">查看错误日志</button><button v-if="active.status==='running'" class="danger" @click="cancel(active)">取消</button><a v-if="active.status==='done'" :href="`/api/jobs/${active.id}/files/${encodeURIComponent(active.filename.replace(/\.[^.]+$/,'')+'.md')}`" target="_blank">打开 Markdown</a></div></div>
+<div class="top"><div><h2>{{active.filename}}</h2><p>{{active.status}} · {{fmt(active.duration)}}</p></div><div class="actions"><button @click="refresh" :disabled="refreshing">{{ refreshing ? '刷新中…' : '刷新' }}</button><button v-if="active.status==='failed'" @click="retry(active)">继续重试</button><button v-if="active.status==='failed'" @click="fetchError(active)">查看错误日志</button><button v-if="active.status==='running'" class="danger" @click="cancel(active)">取消</button><button v-if="active.status==='done' && cfg.global_json_export_dir" @click="exportJsonToGlobal(active)" :disabled="exporting">{{ exporting ? '导出中…' : '导出 JSON 到全局目录' }}</button><a v-if="active.status==='done'" :href="`/api/jobs/${active.id}/files/${encodeURIComponent(active.filename.replace(/\.[^.]+$/,'')+'.md')}`" target="_blank">打开 Markdown</a></div></div>
+<div v-if="active.status==='done' && cfg.global_json_export_dir" class="export-hint">
+  <div>全局导出目录：{{ cfg.global_json_export_dir }}</div>
+  <div v-if="exportMessage">{{ exportMessage }}</div>
+</div>
 <audio v-if="active" ref="audioRef" controls :src="`/api/jobs/${active.id}/audio`" @timeupdate="onTimeUpdate"></audio>
 <div class="stats"><div><b>{{timeline.length}}</b><span>segments</span></div><div><b>{{cfg.diarization_provider}}</b><span>speaker</span></div><div><b>{{cfg.llm_enabled?'云端':'本地'}}</b><span>translation</span></div></div>
 <div v-if="timeline.length" class="playback-panel">

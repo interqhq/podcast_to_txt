@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     llm_chunk_chars: int = 9000
     worker_poll_seconds: float = 2.0
     max_workers: int = 1
+    global_json_export_dir: str = ''
 
     @property
     def root(self) -> Path:
@@ -35,6 +36,15 @@ class Settings(BaseSettings):
     def ensure_dirs(self):
         for p in [self.root, self.root/'uploads', self.root/'jobs', self.root/'models']:
             p.mkdir(parents=True, exist_ok=True)
+        if self.global_json_export_dir.strip():
+            Path(self.global_json_export_dir).expanduser().mkdir(parents=True, exist_ok=True)
+
+    @property
+    def global_json_export_path(self) -> Path | None:
+        path = self.global_json_export_dir.strip()
+        if not path:
+            return None
+        return Path(path).expanduser()
 
 settings = Settings()
 settings.ensure_dirs()
