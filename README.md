@@ -97,11 +97,7 @@ LLM_ENABLED=false
 
 上传一个 5~10 分钟样本。确认 ASR 正常后再开启 pyannote。
 
-如需在前端一键导出最终 JSON 到统一目录，可额外在 `.env` 设置：
-
-```env
-GLOBAL_JSON_EXPORT_DIR=/absolute/path/to/exports
-```
+前端任务完成后，可直接点击“下载 JSON 到本机”按钮，浏览器会弹出保存文件对话框，选择本地任意目录保存最终 JSON 文件。若浏览器不支持文件保存器，则自动回退为标准下载。
 
 ## NVIDIA
 

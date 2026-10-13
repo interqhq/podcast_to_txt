@@ -102,14 +102,36 @@ function choose(e){upload([...e.target.files])}
 function drop(e){upload([...e.dataTransfer.files].filter(f=>f.type.startsWith('audio/')||/\.(mp3|m4a|wav|flac|aac|ogg|opus|mp4|webm)$/i.test(f.name)))}
 async function retry(j){await api(`/api/jobs/${j.id}/retry`,{method:'POST'}); await refresh()}
 async function cancel(j){await api(`/api/jobs/${j.id}/cancel`,{method:'POST'}); await refresh()}
-async function exportJsonToGlobal(j){
+async function downloadJsonToLocal(j){
   exportMessage.value=''
   exporting.value=true
   try{
-    const r = await api(`/api/jobs/${j.id}/export-json-global`,{method:'POST'})
-    exportMessage.value = `已导出到：${r.path}`
+    const fileName = `${j.filename.replace(/\.[^.]+$/, '')}.json`
+    const response = await fetch(`/api/jobs/${j.id}/files/${encodeURIComponent(fileName)}`)
+    if(!response.ok) throw new Error(await response.text())
+    const blob = await response.blob()
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'JSON 文件', accept: { 'application/json': ['.json'] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(blob)
+      await writable.close()
+      exportMessage.value = `已保存到本机选择位置：${fileName}`
+      return
+    }
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    exportMessage.value = `已下载到浏览器默认保存目录：${fileName}`
   }catch(e){
-    exportMessage.value = `导出失败：${normalizeErrorText(formatErr(e))}`
+    exportMessage.value = `下载失败：${normalizeErrorText(formatErr(e))}`
   }finally{
     exporting.value=false
   }
@@ -163,9 +185,9 @@ function fmt(sec){if(sec==null)return '--:--';sec=Math.max(0,Math.floor(sec));re
 <div class="layout">
 <aside><div class="aside-title">任务 <small>{{jobs.length}}</small></div><div v-for="j in jobs" :key="j.id" class="job" :class="{sel:selected?.id===j.id}" @click="select(j)"><div class="job-name">{{j.filename}}</div><div class="meta"><span>{{j.step}}</span><span>{{pct(j)}}%</span></div><div class="bar"><i :style="{width:pct(j)+'%'}"></i></div><button class="delete" @click.stop="remove(j)">删除</button></div></aside>
 <main v-if="active">
-<div class="top"><div><h2>{{active.filename}}</h2><p>{{active.status}} · {{fmt(active.duration)}}</p></div><div class="actions"><button @click="refresh" :disabled="refreshing">{{ refreshing ? '刷新中…' : '刷新' }}</button><button v-if="active.status==='failed'" @click="retry(active)">继续重试</button><button v-if="active.status==='failed'" @click="fetchError(active)">查看错误日志</button><button v-if="active.status==='running'" class="danger" @click="cancel(active)">取消</button><button v-if="active.status==='done' && cfg.global_json_export_dir" @click="exportJsonToGlobal(active)" :disabled="exporting">{{ exporting ? '导出中…' : '导出 JSON 到全局目录' }}</button><a v-if="active.status==='done'" :href="`/api/jobs/${active.id}/files/${encodeURIComponent(active.filename.replace(/\.[^.]+$/,'')+'.md')}`" target="_blank">打开 Markdown</a></div></div>
-<div v-if="active.status==='done' && cfg.global_json_export_dir" class="export-hint">
-  <div>全局导出目录：{{ cfg.global_json_export_dir }}</div>
+<div class="top"><div><h2>{{active.filename}}</h2><p>{{active.status}} · {{fmt(active.duration)}}</p></div><div class="actions"><button @click="refresh" :disabled="refreshing">{{ refreshing ? '刷新中…' : '刷新' }}</button><button v-if="active.status==='failed'" @click="retry(active)">继续重试</button><button v-if="active.status==='failed'" @click="fetchError(active)">查看错误日志</button><button v-if="active.status==='running'" class="danger" @click="cancel(active)">取消</button><button v-if="active.status==='done'" @click="downloadJsonToLocal(active)" :disabled="exporting">{{ exporting ? '下载中…' : '下载 JSON 到本机' }}</button><a v-if="active.status==='done'" :href="`/api/jobs/${active.id}/files/${encodeURIComponent(active.filename.replace(/\.[^.]+$/,'')+'.md')}`" target="_blank">打开 Markdown</a></div></div>
+<div v-if="active.status==='done'" class="export-hint">
+  <div>浏览器会弹出“保存文件”对话框，选择本机任意目录即可。</div>
   <div v-if="exportMessage">{{ exportMessage }}</div>
 </div>
 <audio v-if="active" ref="audioRef" controls :src="`/api/jobs/${active.id}/audio`" @timeupdate="onTimeUpdate"></audio>
