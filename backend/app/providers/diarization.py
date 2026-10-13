@@ -2,6 +2,25 @@ from pathlib import Path
 from ..core.config import settings
 from ..pipeline.models import Segment
 
+
+# import os
+
+# # 修复 socks:// 这种 httpx 不认识的协议
+# for _k in ("ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"):
+#     _v = os.environ.get(_k)
+#     if _v and _v.startswith("socks://"):
+#         os.environ[_k] = "http://" + _v[len("socks://"):]
+
+import huggingface_hub as _hfh
+
+# 兼容性补丁：将 use_auth_token 转换为 token
+_orig_hf_download = _hfh.hf_hub_download
+def _compat_hf_download(*args, **kwargs):
+    if "use_auth_token" in kwargs:
+        kwargs["token"] = kwargs.pop("use_auth_token")
+    return _orig_hf_download(*args, **kwargs)
+_hfh.hf_hub_download = _compat_hf_download
+
 class NoneDiarization:
     def diarize(self,audio): return []
 
@@ -29,11 +48,25 @@ class FunASRCamDiarization:
 
 class PyannoteDiarization:
     def __init__(self): self.pipeline=None
+    # def load(self):
+    #     if self.pipeline: return
+    #     if not settings.hf_token: raise RuntimeError('HF_TOKEN is required for pyannote')
+    #     from pyannote.audio import Pipeline
+    #     self.pipeline=Pipeline.from_pretrained(settings.diarization_model, use_auth_token=settings.hf_token)
+    #     try:
+    #         import torch
+    #         if torch.cuda.is_available(): self.pipeline.to(torch.device('cuda'))
+    #     except Exception: pass
     def load(self):
         if self.pipeline: return
-        if not settings.hf_token: raise RuntimeError('HF_TOKEN is required for pyannote')
         from pyannote.audio import Pipeline
-        self.pipeline=Pipeline.from_pretrained(settings.diarization_model, token=settings.hf_token)
+        cfg = Path(settings.root) / 'speaker' / 'pyannote' / 'speaker-diarization-3.1' / 'config.yaml'
+        # 如果你的 data 目录不在 settings.root 下，这里改成实际路径
+        if not cfg.exists():
+            raise RuntimeError(f'本地 diarization 配置不存在: {cfg}')
+        self.pipeline = Pipeline.from_pretrained(str(cfg))
+        if self.pipeline is None:
+            raise RuntimeError(f'加载失败: {cfg}')
         try:
             import torch
             if torch.cuda.is_available(): self.pipeline.to(torch.device('cuda'))

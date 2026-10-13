@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")"
 
-CONDA_ENV_NAME="${CONDA_ENV_NAME:-env311}"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-podenv311}"
 PORT="${PORT:-8765}"
 HOST="${HOST:-127.0.0.1}"
 CONDA_SH="${HOME}/anaconda3/etc/profile.d/conda.sh"
@@ -30,14 +30,14 @@ detect_port_pids() {
   fi
 
   if [ -z "${pids}" ] && command -v ss >/dev/null 2>&1; then
-    pids="$(ss -ltnp "sport = :${port}" 2>/dev/null | awk 'NR > 1 { if (match($NF, /pid=([0-9]+)/, m)) print m[1] }' | sort -u)"
+    pids="$(ss -ltnp "sport = :${port}" 2>/dev/null | grep -Eo 'pid=[0-9]+' | cut -d= -f2 | sort -u)"
   fi
 
   if [ -z "${pids}" ] && command -v fuser >/dev/null 2>&1; then
     pids="$(fuser -n tcp "${port}" 2>/dev/null || true)"
   fi
 
-  printf '%s\n' "${pids}" | awk 'NF' | sort -u
+  printf '%s\n' "${pids}" | grep -E -v '^$' | sort -u
 }
 
 stop_existing_server() {

@@ -36,12 +36,12 @@ sudo apt install -y python3.10 python3.10-venv python3.10-dev
 
 ### 2. 创建环境（Anaconda / Conda）
 
-如果你本来就是用 Anaconda，优先在 `env311` 中安装依赖，而不是项目内的 `.venv`：
+如果你本来就是用 Anaconda，优先在 `podenv311` 中安装依赖，而不是项目内的 `.venv`：
 
 ```bash
 cd podcast_studio_v1
 source ~/anaconda3/etc/profile.d/conda.sh
-conda activate env311
+conda activate podenv311
 python -m pip install -U pip wheel setuptools
 pip install -r backend/requirements.txt
 ```
@@ -50,8 +50,8 @@ pip install -r backend/requirements.txt
 
 ```bash
 source ~/anaconda3/etc/profile.d/conda.sh
-conda create -n env311 python=3.11 -y
-conda activate env311
+conda create -n podenv311 python=3.11 -y
+conda activate podenv311
 python -m pip install -U pip wheel setuptools
 pip install -r backend/requirements.txt
 ```
@@ -76,11 +76,11 @@ cp .env.example .env
 
 ```bash
 source ~/anaconda3/etc/profile.d/conda.sh
-conda activate env311
+conda activate podenv311
 ./run.sh
 ```
 
-如果你走的是项目脚本，`run.sh` 会自动切到 `env311` 环境。
+如果你走的是项目脚本，`run.sh` 会自动切到 `podenv311` 环境。
 
 打开 http://127.0.0.1:8765
 
@@ -229,3 +229,7 @@ pip install 'funasr>=1.4,<2'
 ```
 
 如果暂时不构建前端，后端 API 仍然可用，访问 `/docs` 查看 Swagger。
+
+<!-- conda install -y pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install pyannote.audio -->
+<!-- pip install --no-cache-dir torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -->

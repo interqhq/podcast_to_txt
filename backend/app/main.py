@@ -1,3 +1,20 @@
+# main.py 最顶部
+import os
+
+def _fix_proxy_env():
+    for k in ("ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy",
+              "HTTPS_PROXY", "https_proxy"):
+        v = os.environ.get(k)
+        if v and v.startswith("socks://"):
+            os.environ[k] = "http://" + v[len("socks://"):]
+
+_fix_proxy_env()
+
+
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

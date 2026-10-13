@@ -3,7 +3,7 @@ set -euo pipefail
 sudo apt update
 sudo apt install -y software-properties-common ffmpeg git curl build-essential
 
-CONDA_ENV_NAME="${CONDA_ENV_NAME:-env311}"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-podenv311}"
 if ! command -v conda >/dev/null 2>&1; then
   echo "Conda is not on PATH. Please install Miniconda/Anaconda first."
   exit 1
